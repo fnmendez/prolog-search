@@ -1,112 +1,92 @@
-:- discontiguous holds/2,is_negative_effect/2,is_positive_effect/2,poss/2.
+% Handle warnings
+:- discontiguous holds/2, is_negative_effect/2, is_positive_effect/2, poss/2.
 
-%%%%% First, the a blocksworld
+%%%%%%%%%%% OBJECTS INSTANCES %%%%%%%%%%%
 
-%% Object Declaration (problem-specific)
 container(C) :- member(C, [c1, c2, c3, c4, c5, c6]).
-paleta(P) :- member(P, [p11, p21, p12, p22, p13]).
-superficie(S) :-
-    container(S).
-superficie(S) :-
-    paleta(S).
-lugar(L) :-
+pallet(P) :- member(P, [p11, p21, p12, p22, p13]).
+surface(S) :-
+    container(S); pallet(S).
+site(L) :-
     member(L, [cargo1, cargo2, cargo3]).
-conectada(C1,C2) :-
+connected(C1, C2) :-
     member([X1, X2], [[cargo1, cargo2], [cargo2, cargo3]]),
-    (C1=X1,C2=X2; C1=X2,C2=X1).
-grua(G) :-
-    member(G,[g1, g2, g3]).
-camion(Cam) :-
-    member(Cam, [cam1]).
+    (C1=X1, C2=X2; C1=X2, C2=X1).
+crane(G) :-
+    member(G, [g1, g2, g3]).
+truck(T) :-
+    member(T, [cam1]).
 
-%% Initial Situation (problem-specific)
-holds(F,s0) :-
+%%%%%%%%%%% INITIAL SITUATION %%%%%%%%%%%
+
+holds(F, s0) :-
     member(F,
-        [en(cam1, cargo1), en(g1, cargo1), en(g2, cargo2), en(g3, cargo3),
-        disponible(g1), disponible(g2), en(p11,cargo1), en(p21, cargo1),
-        en(c1, cargo1), en(c2, cargo1), sobre(c1, p11), sobre(c2, c1),
-        despejada(c2),despejada(p21), en(p12, cargo2), en(p22, cargo2),
-        en(c3, cargo2), en(c4, cargo2), en(c5, cargo2), sobre(c3,p12),
-        sobre(c4, c3), sobre(c5, c4), sobre(c6, p22), despejada(c5),
-        despejada(c6), en(p13, cargo3), despejada(p13)]
+        [in(cam1, cargo1), in(g1, cargo1), in(g2, cargo2), in(g3, cargo3),
+        available(g1), available(g2), in(p11,cargo1), in(p21, cargo1),
+        in(c1, cargo1), in(c2, cargo1), on(c1, p11), on(c2, c1),
+        clear(c2), clear(p21), in(p12, cargo2), in(p22, cargo2),
+        in(c3, cargo2), in(c4, cargo2), in(c5, cargo2), on(c3, p12),
+        on(c4, c3), on(c5, c4), on(c6, p22), clear(c5),
+        clear(c6), in(p13, cargo3), clear(p13)]
         ).
 
-%%% Accion manejar: precondicion
+%%%%%%%%%%% ACTIONS CONDITIONS %%%%%%%%%%%
 
-poss(manejar(Cam, L1, L2), S) :-
-    camion(Cam), conectada(L1, L2), holds(en(Cam, L1), S).
+% Drive
+poss(drive(Cam, L1, L2), S) :-
+    truck(Cam), connected(L1, L2), holds(in(Cam, L1), S).
 
-%%% Accion manejar: efecto positivo
+% Raise
+poss(raise(G, C, Sur, L), S) :-
+    crane(G), container(C), surface(Sur), site(L),
+    holds(available(G), S), holds(on(C, Sur), S), holds(clear(C), S),
+    holds(in(G, L), S), holds(in(C, L), S), holds(in(Sur, L), S).
 
-is_positive_effect(manejar(Cam, _, L2), en(Cam, L2)).
+% Drop
+poss(drop(G, C, Sur, L), S) :-
+    crane(G), container(C), surface(Sur), site(L),
+    holds(raising(G, C), S), holds(clear(Sur), S),
+    holds(in(G, L), S), holds(in(Sur, L), S).
 
-%%% Accion manejar: efecto negativo
-is_negative_effect(manejar(Cam, L1, _), en(Cam, L1)).
+% Load
+poss(load(G, C, T, L), S) :-
+    crane(G), container(C), truck(T), site(L),
+    holds(raising(G, C), S),
+    holds(in(G, L), S), holds(in(T, L), S).
 
-%%% Accion levantar: precondicion
+% Unload
+poss(unload(G, C, T, L), S) :-
+    crane(G), container(C), truck(T), site(L),
+    holds(available(G), S), holds(inside(C, T), S),
+    holds(in(G, L), S), holds(in(T, L), S).
 
-poss(levantar(G, C, Sup, L), S) :-
-    %% COMPLETE
-    grua(G), superficie(Sup), lugar(L).
+%%%%%%%%%%% ACTIONS EFFECTS %%%%%%%%%%%
 
+% Drive
+is_positive_effect(drive(Cam, _, L2), in(Cam, L2)).
+is_negative_effect(drive(Cam, L1, _), in(Cam, L1)).
 
-%%% Accion levantar: efectos positivos
+% Raise
+is_positive_effect(raise(G, C, _, _), raising(G, C)).
+is_positive_effect(raise(_, _, Sur, _), clear(Sur)).
+is_negative_effect(raise(_, C, Sur, _), on(C, Sur)).
+is_negative_effect(raise(_, C, _, L), in(C, L)).
 
-is_positive_effect(levantar(G, C, _, _), levantando(G, C)).
-%% COMPLETE
+% Drop
+is_positive_effect(drop(_, C, _, L), in(C, L)).
+is_positive_effect(drop(_, C, Sur, _), on(C, Sur)).
+is_negative_effect(drop(G, C, _, _), raising(G, C)).
+is_negative_effect(drop(_, _, Sur, _), clear(Sur)).
 
-%%% Accion levantar: efectos negativos
+% Load
+is_positive_effect(load(_, C, T, _), inside(C, T)).
+is_positive_effect(load(G, _, _, _), available(G)).
+is_negative_effect(load(G, C, _, _), raising(G, C)).
 
-is_negative_effect(levantar(_, C, Sup, _), sobre(C, Sup)).
-%% COMPLETE
-
-
-%%% Accion soltar: precondicion
-
-poss(soltar(G, C, Sup, L), S) :-
-    %% COMPLETE
-    grua(G), superficie(Sup), lugar(L).
-
-
-%%% Accion soltar: efectos positivos
-
-%% COMPLETE
-
-%%% Accion soltar: efectos negativos
-
-%% COMPLETE
-
-
-%%% Accion cargar: precondicion
-
-poss(cargar(G, Container, Camion, L), S) :-
-    %% COMPLETE
-    grua(G), camion(Camion), lugar(L).
-
-
-%%% Accion soltar: cargar positivos
-
-%% COMPLETE
-
-
-%%% Accion soltar: cargar negativos
-
-%% COMPLETE
-
-
-
-%%% Accion descargar: precondicion
-
-poss(descargar(G, Container, Camion, L), S) :-
-%% COMPLETE
-    grua(G), camion(Camion), superficie(Sup), lugar(L).
-
-
-%%% Accion descargar: cargar positivos
-%% COMPLETE
-
-%%% Accion descargar: cargar negativos
-%% COMPLETE
+% Unload
+is_positive_effect(unload(G, C, _, _), raising(G, C)).
+is_negative_effect(unload(G, _, _, _), available(G)).
+is_negative_effect(unload(_, C, T, _), inside(C, T)).
 
 %%%%% Situation Calculus Successor State Axiom a la Reiter (domain-independent)
 holds(F, do(A, S)) :-
@@ -129,16 +109,16 @@ legal(do(A, S)) :-
 
 %%
 
-goal_condition([en(c1, cargo2), en(c5, cargo1)]).
+goal_condition([in(c1, cargo2), in(c5, cargo1)]).
 
 astar_heuristic(State, N) :- astar_heuristic0(State, N).
 
 astar_heuristic0(_, 0).
 
-%%astar_heuristic1(State,N) :-
+%%astar_heuristic1(State, N) :-
 
-%%astar_heuristic2(State,N) :-
+%%astar_heuristic2(State, N) :-
 
-%%astar_heuristic3(State,N) :-
+%%astar_heuristic3(State, N) :-
 
-%%astar_heuristic4(State,N) :-
+%%astar_heuristic4(State, N) :-
