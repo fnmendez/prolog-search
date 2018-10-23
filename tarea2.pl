@@ -22,9 +22,9 @@ truck(T) :-
 holds(F, s0) :-
     member(F,
         [in(cam1, cargo1), in(g1, cargo1), in(g2, cargo2), in(g3, cargo3),
-        available(g1), available(g2), in(p11,cargo1), in(p21, cargo1),
-        in(c1, cargo1), in(c2, cargo1), on(c1, p11), on(c2, c1),
-        clear(c2), clear(p21), in(p12, cargo2), in(p22, cargo2),
+        available(g1), available(g2), available(g3), in(p11,cargo1),
+        in(p21, cargo1), in(c1, cargo1), in(c2, cargo1), on(c1, p11),
+        on(c2, c1), clear(c2), clear(p21), in(p12, cargo2), in(p22, cargo2),
         in(c3, cargo2), in(c4, cargo2), in(c5, cargo2), on(c3, p12),
         on(c4, c3), on(c5, c4), on(c6, p22), clear(c5),
         clear(c6), in(p13, cargo3), clear(p13)]
