@@ -3,31 +3,31 @@
 
 %%%%%%%%%%% OBJECTS INSTANCES %%%%%%%%%%%
 
-container(C) :- member(C, [c1, c2, c3, c4, c5, c6]).
-pallet(P) :- member(P, [p11, p21, p12, p22, p13]).
+container(C) :- member(C, [c1, c2, c3]).
+pallet(P) :- member(P, [p11, p12]).
 surface(S) :-
     container(S); pallet(S).
 site(L) :-
-    member(L, [cargo1, cargo2, cargo3]).
+    member(L, [cargo1, cargo2]).
 connected(C1, C2) :-
-    member([X1, X2], [[cargo1, cargo2], [cargo2, cargo3]]),
+    member([X1, X2], [[cargo1, cargo2], [cargo1, cargo2]]),
     (C1=X1, C2=X2; C1=X2, C2=X1).
 crane(G) :-
-    member(G, [g1, g2, g3]).
+    member(G, [g1, g2]).
 truck(T) :-
-    member(T, [cam1]).
+    member(T, [cam1, cam2]).
 
 %%%%%%%%%%% INITIAL SITUATION %%%%%%%%%%%
 
 holds(F, s0) :-
     member(F,
-        [in(cam1, cargo1), in(g1, cargo1), in(g2, cargo2), in(g3, cargo3),
-        available(g1), available(g2), available(g3), in(p11,cargo1),
-        in(p21, cargo1), in(c1, cargo1), in(c2, cargo1), on(c1, p11),
-        on(c2, c1), clear(c2), clear(p21), in(p12, cargo2), in(p22, cargo2),
-        in(c3, cargo2), in(c4, cargo2), in(c5, cargo2), on(c3, p12),
-        on(c4, c3), on(c5, c4), on(c6, p22), clear(c5),
-        clear(c6), in(p13, cargo3), clear(p13)]
+        [in(cam1, cargo1), in(cam2, cargo2),
+        in(g1, cargo1), in(g2, cargo2),
+        available(g1), available(g2),
+        in(p11,cargo1), in(p12, cargo2),
+        in(c1, cargo1), in(c2, cargo2), in(c3, cargo1),
+        on(c1, p11), on(c3, c1), on(c2, p12),
+        clear(c2), clear(c3)]
         ).
 
 %%%%%%%%%%% ACTIONS CONDITIONS %%%%%%%%%%%
@@ -109,16 +109,34 @@ legal(do(A, S)) :-
 
 %%
 
-goal_condition([in(c1, cargo2), in(c5, cargo1)]).
+goal_condition([in(c1, cargo2), in(c2, cargo1)]).
 
-astar_heuristic(State, N) :- astar_heuristic0(State, N).
+astar_heuristic(State, N) :-
+    astar_heuristic1(State, N).
+    % N is 3 * N1.
 
 astar_heuristic0(_, 0).
 
-%%astar_heuristic1(State, N) :-
+astar_heuristic1(State, N) :-
+    goal_condition(Goal),
+    findall(C1, (member(in(C1, S1), Goal), \+ member(in(C1, S1), State)), L1),
+    findall(C2, (member(in(C2, _), Goal), member(inside(C2, _), State)), L2),
+    length(L1, N1),
+    length(L2, N2),
+    N is N1 + N2.
 
-%%astar_heuristic2(State, N) :-
+astar_heuristic2(State, N) :-
+    goal_condition(Goal),
+    findall(C, (member(in(C, S), Goal), \+ member(in(C, S), State)), L),
+    length(L, N).
 
-%%astar_heuristic3(State, N) :-
+astar_heuristic3(State, N) :-
+    findall(C1, (member(in(C1, S1), Goal), \+ member(in(C1, S1), State)), L1),
+    findall(C2, (member(in(C2, _), Goal), member(inside(C2, _), State)), L2),
+    findall(C3, (member(in(C3, S2), Goal), member(raising(G1, C3), State), \+ member(in(G1, S2), State)), L3),
+    length(L1, N1),
+    length(L2, N2),
+    length(L3, N3),
+    N is N1 + N2 + N3.
 
 %%astar_heuristic4(State, N) :-
